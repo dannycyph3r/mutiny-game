@@ -1,0 +1,19 @@
+{
+  "name": "mutiny",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Mutiny: a lo-fi retro browser game that is a design system running at 60fps.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "verify": "bun tools/verify.ts",
+    "audit": "node tools/audit.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

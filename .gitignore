@@ -1,0 +1,7 @@
+node_modules
+dist
+dist-check
+.DS_Store
+*.local
+.vite
+serve/
