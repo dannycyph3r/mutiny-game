@@ -1,0 +1,156 @@
+/* =============================================================================
+   MUTINY design tokens
+   -----------------------------------------------------------------------------
+   Taken from the documented system, not re-invented. Every value in the game
+   resolves to a token defined once here: nothing in a component or in the canvas
+   renderer hardcodes a colour, a duration or a radius.
+
+   Tokens are authored in OKLCH so the light-environment HUD is derived by
+   shifting lightness while holding hue and chroma. That is what makes the
+   day variant a one-line change rather than a second palette, and the game
+   proves it: the environment toggle swaps --env and nothing else.
+   ========================================================================== */
+
+:root {
+  /* --- Colour roles ------------------------------------------------------- */
+  /* Amber is the single accent. One hue means focus is never ambiguous: if
+     something is amber, the controller owns it. Health, nano, hostiles and
+     friendlies are pulled off that hue deliberately so a status read never
+     competes with a focus read. */
+  --background: oklch(0.16 0.012 70); /* #0b0a08 near-black base */
+  --surface: oklch(0.21 0.014 70); /* #13100d panels and cards */
+  --surface-raised: oklch(0.26 0.016 70);
+
+  --primary: oklch(0.78 0.13 68); /* #e9a44a accent, focus, selection */
+  /* The accent has three jobs and they need three tokens. As a fill it carries
+     a label, as text it sits on a dark surface, and those two roles pull the
+     lightness in opposite directions. At night one value happens to serve both;
+     in daylight it does not, which is how the split was found. */
+  /* The accent against a surface, for text and for strokes alike. Outlines
+     carry a 3:1 floor of their own, and in daylight the fill value missed it
+     at 2.89:1 on a panel, so the two roles do not share a value. */
+  --primary-ink: oklch(0.78 0.13 68); /* 7.61:1 as text on the raised surface */
+  --ink-on-primary: oklch(0.16 0.012 70); /* label on the accent fill, 9.53:1 */
+  --health: oklch(0.81 0.115 70); /* #edaf53 warm, always paired with numerals */
+  --nano: oklch(0.77 0.09 232); /* #70bfdc cool, opposite health on the wheel */
+  --hostile: oklch(0.62 0.17 25); /* #db4f4a always paired with a chevron */
+  --friendly: oklch(0.82 0.11 165); /* #7cd6b0 always paired with a circle */
+  --objective: oklch(0.87 0.12 88); /* #f2d572 always paired with a diamond */
+  --warning: oklch(0.83 0.14 82); /* #eec04d with motion and copy, never alone */
+  --disabled: oklch(0.46 0.008 70); /* plus reduced opacity and a lock glyph */
+
+  --ink: oklch(0.96 0.006 70);
+  --ink-dim: oklch(0.74 0.008 70);
+  --ink-faint: oklch(0.64 0.008 70); /* measured to 4.60:1 on the raised surface */
+
+  /* --- Environment --------------------------------------------------------
+     The light-environment variant. Lightness shifts, hue and chroma hold. */
+  --env-wash: oklch(0.16 0.012 70 / 0.55);
+  --env-grade: oklch(0.5 0.02 250 / 0.12);
+
+  /* -- Arena marks ----------------------------------------------------------
+     Gameplay marks do not take the environment shift, and that is a measured
+     decision rather than an oversight. Every mark is drawn on an opaque plate
+     of --arena-ground, so the ground a mark sits on is the same in daylight as
+     it is at night. Tuning the wash instead was tried first and does not work:
+     no opacity value makes a mid-lightness red clear 3:1 against arbitrary
+     photography, and the values that came close erased the art they were
+     washing. Separation comes from geometry, so the wash is free to be light
+     enough to leave the backdrop visible. */
+  --arena-ground: oklch(0.16 0.012 70);
+  --mark-hostile: oklch(0.62 0.17 25); /* 4.94:1 on the plate, always a chevron */
+  --mark-friendly: oklch(0.82 0.11 165); /* 11.66:1, always a circle */
+  --mark-objective: oklch(0.87 0.12 88); /* 13.10:1, always a diamond */
+  --mark-round: oklch(0.78 0.13 68); /* 9.53:1, player rounds */
+  --mark-player: oklch(0.96 0.006 70); /* 17.28:1, always a cross */
+}
+
+:root[data-env='day'] {
+  --background: oklch(0.31 0.014 70);
+  --surface: oklch(0.36 0.016 70);
+  --surface-raised: oklch(0.42 0.018 70);
+  --primary: oklch(0.62 0.14 66);
+  --primary-ink: oklch(0.86 0.13 68); /* 5.22:1 on the raised surface */
+  --ink-on-primary: oklch(0.14 0.012 70); /* 5.32:1 on the fill, 6.78:1 on hover */
+  --health: oklch(0.64 0.13 68);
+  --nano: oklch(0.58 0.11 235);
+  --hostile: oklch(0.5 0.19 25);
+  --friendly: oklch(0.63 0.13 165);
+  --objective: oklch(0.7 0.14 86);
+  --warning: oklch(0.66 0.15 80);
+  --disabled: oklch(0.55 0.008 70);
+  --ink: oklch(0.99 0.004 70);
+  --ink-dim: oklch(0.9 0.006 70);
+  --ink-faint: oklch(0.84 0.008 70); /* the same measurement, re-run in daylight */
+  --env-wash: oklch(0.2 0.012 70 / 0.42);
+  --env-grade: oklch(0.8 0.03 80 / 0.1);
+}
+
+:root {
+  /* --- Spacing, 4px base --------------------------------------------------
+     Keeps HUD elements on the same grid as the safe-zone frame, so nothing
+     drifts when the layout compresses. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+
+  /* --- Type ---------------------------------------------------------------
+     Display and section headings in Barlow Condensed, UI and body in IBM Plex
+     Sans, technical labels and numeric data in IBM Plex Mono. */
+  --font-display: 'Barlow Condensed', 'Oswald', 'Arial Narrow', sans-serif;
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --type-display: 700 clamp(3.5rem, 9vw, 7rem) / 0.9 var(--font-display);
+  --type-heading: 700 clamp(1.75rem, 3vw, 3rem) / 0.95 var(--font-display);
+  --type-item: 600 1rem / 1.2 var(--font-ui);
+  --type-label: 500 0.6875rem / 1.4 var(--font-mono);
+  --type-body: 400 1rem / 1.6 var(--font-ui);
+  --type-data: 600 1.25rem / 1 var(--font-mono);
+
+  --track-display: 0.005em;
+  --track-heading: 0.01em;
+  --track-item: 0.14em;
+  --track-label: 0.18em;
+  --track-data: 0.06em;
+
+  /* --- Motion --------------------------------------------------------------
+     Every duration here is from the motion table. Nothing was invented to make
+     the game feel better: the game was tuned to the documented values. */
+  --ease-ui: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-selection: 200ms; /* default to focused */
+  --dur-equip: 420ms; /* available to equipped */
+  --dur-unequip: 240ms; /* equipped to empty, faster: removal needs acknowledgement */
+  --dur-impact: 340ms; /* damage impact, directional and brief */
+  --dur-critical: 1100ms; /* the only looping animation in the HUD */
+  --dur-ability-active: 1400ms; /* ready to activated */
+  --dur-ability-cooldown: 2800ms; /* activated to cooldown to ready */
+  --dur-nav: 220ms; /* inactive to active */
+  --dur-nav-ping: 2000ms; /* objective ping loop */
+
+  /* --- Frame ---------------------------------------------------------------
+     1920x1080 gameplay target with a 5% title-safe inset, drawn from the
+     safe-zone frame in the layout documentation. */
+  --safe-x: 5%;
+  --safe-y: 5%;
+  --radius: 2px;
+  --hairline: 1px;
+}
+
+/* Motion is a feedback channel, so it is also an accessibility setting. Screen
+   shake, the critical pulse and the scanline drift all key off this. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-selection: 1ms;
+    --dur-equip: 1ms;
+    --dur-unequip: 1ms;
+    --dur-impact: 1ms;
+    --dur-critical: 1ms;
+    --dur-nav: 1ms;
+  }
+}
