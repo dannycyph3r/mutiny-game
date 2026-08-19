@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en" data-env="night">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="MUTINY, a lo-fi arena built from a documented game UI design system. Every token, timing and shape rule comes from the spec." />
+    <title>MUTINY</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the game</a>
+
+    <div class="cabinet">
+      <div class="stage" id="stage">
+        <canvas id="canvas" width="480" height="270" aria-hidden="true"></canvas>
+
+        <!-- The HUD is real DOM, not painted into the canvas. That keeps it
+             readable by assistive tech and means it is literally the documented
+             component set running, rather than a picture of it. -->
+        <div class="hud" id="hud" hidden>
+          <div class="hud-row hud-row--top">
+            <div class="vitals">
+              <!-- Health: warm value paired with numerals so it never reads by
+                   colour alone. -->
+              <div class="meter meter--health" id="health-meter">
+                <span class="meter-label">HEALTH</span>
+                <div class="meter-track">
+                  <div class="meter-fill" id="health-fill"></div>
+                </div>
+                <span class="meter-value" id="health-value">100</span>
+              </div>
+
+              <div class="meter meter--nano" id="nano-meter">
+                <span class="meter-label">NANO</span>
+                <div class="meter-track">
+                  <div class="meter-fill" id="nano-fill"></div>
+                </div>
+                <span class="meter-value" id="nano-value">100</span>
+              </div>
+            </div>
+
+            <div class="mission" id="mission">
+              <span class="mission-label">OBJECTIVE</span>
+              <span class="mission-text" id="mission-text">Clear the block</span>
+              <span class="mission-progress" id="mission-progress">0 / 9</span>
+            </div>
+
+            <div class="readout">
+              <div class="readout-line">
+                <span class="readout-label">SCORE</span>
+                <span class="readout-value" id="score-value">0</span>
+              </div>
+              <div class="readout-line">
+                <span class="readout-label">WAVE</span>
+                <span class="readout-value" id="wave-value">1</span>
+              </div>
+              <div class="readout-line combo" id="combo" hidden>
+                <span class="readout-label">COMBO</span>
+                <span class="readout-value" id="combo-value">x1</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-row hud-row--bottom">
+            <!-- Two ability slots, the set the brief specifies. The sweep is
+                 linear because it represents time remaining, and easing it
+                 would misrepresent that. -->
+            <div class="slots">
+              <button class="slot" id="slot-1" type="button" data-state="ready">
+                <span class="slot-key" id="slot-1-key">1</span>
+                <span class="slot-body">
+                  <span class="slot-name">DATA OVERDRIVE</span>
+                  <span class="slot-status" id="slot-1-status">READY</span>
+                </span>
+                <span class="slot-sweep" id="slot-1-sweep"></span>
+              </button>
+              <button class="slot" id="slot-2" type="button" data-state="ready">
+                <span class="slot-key" id="slot-2-key">2</span>
+                <span class="slot-body">
+                  <span class="slot-name">PULSE SCAN</span>
+                  <span class="slot-status" id="slot-2-status">READY</span>
+                </span>
+                <span class="slot-sweep" id="slot-2-sweep"></span>
+              </button>
+            </div>
+
+            <p class="hint" id="hint">
+              <span class="hint-key">WASD</span> move
+              <span class="hint-key">MOUSE</span> aim
+              <span class="hint-key">HOLD</span> fire
+              <span class="hint-key">ESC</span> pause
+            </p>
+          </div>
+        </div>
+
+        <!-- Screens. Each is a real dialog with real buttons, so the whole game
+             is reachable by keyboard and by pad. -->
+        <section class="screen screen--title" id="screen-title">
+          <p class="eyebrow">Ubisoft Toronto NEXT brief, rebuilt as a playable system</p>
+          <h1 class="title">MUTINY</h1>
+          <p class="press">
+            PRESS <span class="prompt" id="start-prompt">A</span> TO PLAY
+          </p>
+          <div class="title-actions">
+            <button class="btn btn--primary" id="btn-start" type="button">Start run</button>
+            <button class="btn" id="btn-scores" type="button">Leaderboard</button>
+            <button class="btn" id="btn-settings" type="button">Settings</button>
+          </div>
+          <p class="best" id="best-line"></p>
+        </section>
+
+        <section class="screen screen--panel" id="screen-intermission" hidden>
+          <p class="eyebrow">Wave cleared</p>
+          <h2 class="heading" id="intermission-heading">Choose an upgrade</h2>
+          <div class="cards" id="upgrade-cards"></div>
+        </section>
+
+        <section class="screen screen--panel" id="screen-pause" hidden>
+          <p class="eyebrow">Paused</p>
+          <div class="tabs" role="tablist" aria-label="Pause menu">
+            <button class="tab" role="tab" id="tab-mission" aria-selected="true" aria-controls="pane-mission" type="button">Mission</button>
+            <button class="tab" role="tab" id="tab-abilities" aria-selected="false" aria-controls="pane-abilities" type="button">Abilities</button>
+            <button class="tab" role="tab" id="tab-map" aria-selected="false" aria-controls="pane-map" type="button">Map</button>
+          </div>
+          <div class="pane" id="pane-mission" role="tabpanel" aria-labelledby="tab-mission"></div>
+          <div class="pane" id="pane-abilities" role="tabpanel" aria-labelledby="tab-abilities" hidden></div>
+          <div class="pane" id="pane-map" role="tabpanel" aria-labelledby="tab-map" hidden></div>
+          <div class="row">
+            <button class="btn btn--primary" id="btn-resume" type="button">Resume</button>
+            <button class="btn" id="btn-quit" type="button">End run</button>
+          </div>
+        </section>
+
+        <section class="screen screen--panel" id="screen-over" hidden>
+          <p class="eyebrow">Run complete</p>
+          <h2 class="heading">Debrief</h2>
+          <div class="debrief" id="debrief"></div>
+          <div class="medals" id="medals"></div>
+          <form class="initials" id="initials-form">
+            <label for="initials-input">Initials for the board</label>
+            <input id="initials-input" class="input" maxlength="3" value="AAA" autocomplete="off" />
+            <button class="btn btn--primary" type="submit">Save score</button>
+          </form>
+          <div class="row">
+            <button class="btn btn--primary" id="btn-again" type="button">Run again</button>
+            <button class="btn" id="btn-title" type="button">Title screen</button>
+          </div>
+        </section>
+
+        <section class="screen screen--panel" id="screen-scores" hidden>
+          <p class="eyebrow">Local board</p>
+          <h2 class="heading">Leaderboard</h2>
+          <div class="board" id="board"></div>
+          <button class="btn" id="btn-scores-back" type="button">Back</button>
+        </section>
+
+        <section class="screen screen--panel" id="screen-settings" hidden>
+          <p class="eyebrow">Settings</p>
+          <h2 class="heading">Options</h2>
+          <div class="options">
+            <div class="option">
+              <div>
+                <p class="option-name">Environment</p>
+                <p class="option-detail">
+                  The light variant is one token change: lightness shifts, hue and chroma hold.
+                </p>
+              </div>
+              <button class="btn" id="btn-env" type="button" aria-pressed="false">Night</button>
+            </div>
+            <div class="option">
+              <div>
+                <p class="option-name">Reduce effects</p>
+                <p class="option-detail">
+                  Turns off shake, scanlines and the objective pulse. Follows your system setting by default.
+                </p>
+              </div>
+              <button class="btn" id="btn-effects" type="button" aria-pressed="false">Off</button>
+            </div>
+            <div class="option">
+              <div>
+                <p class="option-name">Sound</p>
+                <p class="option-detail">Synthesised, no audio files.</p>
+              </div>
+              <button class="btn" id="btn-sound" type="button" aria-pressed="true">On</button>
+            </div>
+            <div class="option">
+              <div>
+                <p class="option-name">Safe-zone frame</p>
+                <p class="option-detail">Draws the 5% title-safe inset from the layout spec.</p>
+              </div>
+              <button class="btn" id="btn-safe" type="button" aria-pressed="false">Off</button>
+            </div>
+          </div>
+          <button class="btn" id="btn-settings-back" type="button">Back</button>
+        </section>
+
+        <!-- One polite region carries state changes that are otherwise only
+             visible in the canvas. -->
+        <p class="visually-hidden" role="status" aria-live="polite" id="announce"></p>
+      </div>
+
+      <footer class="colophon">
+        <p>
+          Built from the documented MUTINY UI system: colour roles, the 4px spacing scale, the
+          type scale and every duration in the motion table. Backdrops are Ubisoft Toronto NEXT
+          concept art from the original brief. Not affiliated with or endorsed by Ubisoft.
+        </p>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

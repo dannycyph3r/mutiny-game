@@ -1,0 +1,847 @@
+/* =============================================================================
+   MUTINY interface
+   -----------------------------------------------------------------------------
+   Fourteen components carry the whole system. Each is documented by anatomy,
+   the states it can enter and the motion between those states. Nothing here
+   invents a value: every colour, space, duration and type role is a token.
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--background);
+  color: var(--ink);
+  font: var(--type-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+p,
+figure {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--s4);
+  top: var(--s4);
+  z-index: 60;
+  padding: var(--s2) var(--s4);
+  background: var(--surface-raised);
+  color: var(--ink);
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform var(--dur-selection) var(--ease-ui);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* --- Cabinet and stage ------------------------------------------------------
+   The stage holds the 16:9 frame. The canvas scales with nearest-neighbour so
+   the pixels stay pixels. */
+.cabinet {
+  width: min(100vw, calc((100vh - 96px) * 16 / 9));
+  padding: var(--s4);
+  display: grid;
+  gap: var(--s3);
+}
+
+.stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--background);
+  border: var(--hairline) solid color-mix(in oklch, var(--primary) 28%, transparent);
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.colophon {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* --- HUD frame --------------------------------------------------------------
+   Everything sits inside the 5% title-safe inset, on the same 4px grid as the
+   rest of the system, so nothing drifts when the layout compresses. */
+.hud {
+  position: absolute;
+  inset: var(--safe-y) var(--safe-x);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+/*
+ * HUD scrims.
+ *
+ * The HUD is DOM and the arena is canvas, so nothing in the cascade knows what
+ * a readout is sitting on. In the daylight arena that ground is a bright sky,
+ * and small mono labels were being asked to hold their own against it. The
+ * scrims give every cluster a known ground in the arena colour, which is the
+ * same trick the entity plates use one layer down: separation by geometry,
+ * measured once, rather than hope about what the art happens to be doing.
+ */
+.hud::before,
+.hud::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--safe-x) * -1);
+  right: calc(var(--safe-x) * -1);
+  height: calc(var(--safe-y) + 88px);
+  pointer-events: none;
+}
+
+.hud::before {
+  top: calc(var(--safe-y) * -1);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklch, var(--arena-ground) 88%, transparent),
+    color-mix(in oklch, var(--arena-ground) 78%, transparent) 55%,
+    transparent
+  );
+}
+
+.hud::after {
+  bottom: calc(var(--safe-y) * -1);
+  background: linear-gradient(
+    to top,
+    color-mix(in oklch, var(--arena-ground) 88%, transparent),
+    color-mix(in oklch, var(--arena-ground) 78%, transparent) 55%,
+    transparent
+  );
+}
+
+.hud-row {
+  display: flex;
+  gap: var(--s5);
+  align-items: flex-start;
+  /* Above the scrims, which are the HUD's own pseudo-elements. A negative
+     z-index would have put them behind the canvas instead. */
+  position: relative;
+  z-index: 1;
+}
+
+.hud-row--bottom {
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+/* --- Meter: health and nano --------------------------------------------------
+   Value, track, fill and numerals. The numerals are not optional: the colour
+   never carries the reading on its own. */
+.vitals {
+  display: grid;
+  gap: var(--s2);
+  min-width: clamp(140px, 18vw, 220px);
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.meter-label {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-dim);
+  font-size: clamp(7px, 0.7vw, 11px);
+}
+
+.meter-track {
+  height: clamp(4px, 0.6vw, 8px);
+  background: color-mix(in oklch, var(--surface) 80%, transparent);
+  border: var(--hairline) solid color-mix(in oklch, var(--ink) 18%, transparent);
+}
+
+.meter-fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transition: width var(--dur-nav) var(--ease-ui);
+}
+
+.meter--health .meter-fill {
+  background: var(--health);
+}
+
+.meter--nano .meter-fill {
+  background: var(--nano);
+}
+
+.meter-value {
+  font: var(--type-data);
+  letter-spacing: var(--track-data);
+  font-size: clamp(11px, 1.1vw, 20px);
+  color: var(--ink);
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* Critical is the only looping animation in the HUD, and it is paired with a
+   text state so the loop is never the sole signal. */
+.meter--health[data-critical='true'] .meter-fill {
+  animation: critical var(--dur-critical) var(--ease-ui) infinite;
+}
+
+.meter--health[data-critical='true'] .meter-value {
+  color: var(--warning);
+}
+
+@keyframes critical {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* --- Mission and navigation -------------------------------------------------- */
+.mission {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  text-align: center;
+  flex: 1;
+}
+
+.mission-label {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  font-size: clamp(7px, 0.7vw, 11px);
+  color: var(--objective);
+}
+
+.mission-text {
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  font-size: clamp(9px, 0.95vw, 16px);
+  color: var(--ink);
+}
+
+.mission-progress {
+  font: var(--type-data);
+  letter-spacing: var(--track-data);
+  font-size: clamp(10px, 0.9vw, 16px);
+  color: var(--ink-dim);
+}
+
+/* Only the current objective animates, so attention has one destination. */
+.mission[data-updated='true'] .mission-text {
+  animation: ping var(--dur-nav-ping) var(--ease-ui) 2;
+}
+
+@keyframes ping {
+  0%,
+  100% {
+    color: var(--ink);
+  }
+  20% {
+    color: var(--objective);
+  }
+}
+
+/* --- Readout ------------------------------------------------------------------ */
+.readout {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  min-width: clamp(90px, 12vw, 160px);
+}
+
+.readout-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.readout-label {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  font-size: clamp(7px, 0.7vw, 11px);
+  color: var(--ink-faint);
+}
+
+.readout-value {
+  font: var(--type-data);
+  letter-spacing: var(--track-data);
+  font-size: clamp(11px, 1.05vw, 20px);
+  color: var(--ink);
+}
+
+.combo .readout-value {
+  color: var(--primary-ink);
+}
+
+/* --- Ability slot --------------------------------------------------------------
+   Ready, activated, cooldown, ready. The sweep is a linear timing function
+   because it represents time remaining; easing it would misrepresent it. */
+.slots {
+  display: flex;
+  gap: var(--s3);
+  pointer-events: auto;
+}
+
+.slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  min-height: 44px;
+  /* Opaque, not an 86% wash. Measured against the arena underneath, the wash
+     put the slot key at 3.09:1 over a bright backdrop. A HUD panel needs its
+     own ground for the same reason an entity does. */
+  background: var(--surface);
+  border: var(--hairline) solid color-mix(in oklch, var(--ink) 22%, transparent);
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color var(--dur-selection) var(--ease-ui),
+    background var(--dur-selection) var(--ease-ui);
+}
+
+.slot-key {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  font-size: clamp(8px, 0.75vw, 12px);
+  color: var(--ink-dim);
+  border: var(--hairline) solid color-mix(in oklch, var(--ink) 30%, transparent);
+  padding: 1px var(--s1);
+  min-width: 18px;
+  text-align: center;
+}
+
+.slot-body {
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.slot-name {
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  font-size: clamp(8px, 0.8vw, 14px);
+  color: var(--ink);
+}
+
+.slot-status {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  font-size: clamp(7px, 0.65vw, 11px);
+  color: var(--ink-faint);
+}
+
+.slot-sweep {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklch, var(--background) 78%, transparent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  pointer-events: none;
+}
+
+.slot[data-state='ready'] {
+  border-color: color-mix(in oklch, var(--primary-ink) 62%, transparent);
+}
+
+.slot[data-state='ready'] .slot-status {
+  color: var(--primary-ink);
+}
+
+.slot[data-state='active'] {
+  border-color: var(--primary-ink);
+  background: color-mix(in oklch, var(--primary) 22%, var(--surface));
+}
+
+.slot[data-state='active'] .slot-status {
+  color: var(--primary-ink);
+}
+
+/* Unavailable is greyed, dimmed and carries a lock glyph, so three signals
+   agree before the player is told they cannot do something. */
+.slot[data-state='cooldown'],
+.slot[data-state='blocked'] {
+  border-color: color-mix(in oklch, var(--disabled) 60%, transparent);
+}
+
+.slot[data-state='cooldown'] .slot-name,
+.slot[data-state='blocked'] .slot-name {
+  color: var(--disabled);
+}
+
+.slot[data-state='blocked'] .slot-status::before {
+  content: '\1F512  ';
+}
+
+.slot[data-state='blocked'] .slot-status {
+  color: var(--warning);
+}
+
+/* --- Hint --------------------------------------------------------------------- */
+.hint {
+  display: flex;
+  gap: var(--s3);
+  align-items: center;
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  font-size: clamp(7px, 0.7vw, 11px);
+  color: var(--ink-faint);
+  /* The quietest text in the HUD sits over the busiest part of the arena, so
+     it carries a ground of its own rather than relying on the scrim alone. */
+  background: var(--arena-ground);
+  padding: var(--s1) var(--s2);
+}
+
+.hint-key {
+  color: var(--ink-dim);
+  border: var(--hairline) solid color-mix(in oklch, var(--ink) 22%, transparent);
+  padding: 1px var(--s1);
+  margin-right: 2px;
+}
+
+/* --- Screens -------------------------------------------------------------------- */
+.screen {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--s4);
+  padding: var(--s6) var(--s5);
+  text-align: center;
+  background: color-mix(in oklch, var(--background) 86%, transparent);
+  overflow-y: auto;
+}
+
+.screen[hidden] {
+  display: none;
+}
+
+/*
+ * The HUD, the combo line and the panes all set a display value, which beats
+ * the user-agent rule for the hidden attribute. Hiding the HUD before a run
+ * therefore did nothing and it drew straight through the title screen. One
+ * global rule, so no component can opt out of it by accident.
+ */
+[hidden] {
+  display: none !important;
+}
+
+.screen--title {
+  background:
+    radial-gradient(ellipse at 50% 45%, color-mix(in oklch, var(--surface) 70%, transparent), transparent 65%),
+    var(--background);
+}
+
+.eyebrow {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  font-size: clamp(8px, 0.8vw, 11px);
+}
+
+.title {
+  font: var(--type-display);
+  letter-spacing: var(--track-display);
+  color: var(--primary-ink);
+  margin: 0;
+}
+
+.heading {
+  font: var(--type-heading);
+  letter-spacing: var(--track-heading);
+  color: var(--ink);
+}
+
+.press {
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  color: var(--ink-dim);
+  font-size: clamp(11px, 1.1vw, 16px);
+}
+
+/* The A prompt from the title art, kept as its own component so the pad
+   language stays consistent wherever a confirm appears. */
+.prompt {
+  display: inline-grid;
+  place-items: center;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  border: 2px solid var(--friendly);
+  color: var(--friendly);
+  font: var(--type-data);
+  font-size: 0.8em;
+  vertical-align: middle;
+}
+
+.title-actions,
+.row {
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.best {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
+
+/* --- Button ---------------------------------------------------------------------- */
+.btn {
+  padding: var(--s2) var(--s5);
+  min-height: 44px;
+  background: transparent;
+  border: var(--hairline) solid color-mix(in oklch, var(--ink) 34%, transparent);
+  color: var(--ink);
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  font-size: clamp(10px, 1vw, 14px);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-selection) var(--ease-ui),
+    background var(--dur-selection) var(--ease-ui),
+    color var(--dur-selection) var(--ease-ui);
+}
+
+.btn:hover {
+  border-color: var(--primary-ink);
+  color: var(--primary-ink);
+}
+
+.btn--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--ink-on-primary);
+}
+
+.btn--primary:hover {
+  background: color-mix(in oklch, var(--primary) 84%, white);
+  color: var(--ink-on-primary);
+}
+
+/* --- Upgrade cards -----------------------------------------------------------------
+   Selecting a card uses the 420ms equip transition: the choice travels into the
+   slot so the cause of the change stays legible. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--s4);
+  width: min(760px, 100%);
+}
+
+.card {
+  padding: var(--s4);
+  background: var(--surface);
+  border: var(--hairline) solid color-mix(in oklch, var(--ink) 22%, transparent);
+  display: grid;
+  gap: var(--s2);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-selection) var(--ease-ui),
+    transform var(--dur-equip) var(--ease-ui),
+    background var(--dur-equip) var(--ease-ui);
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--primary-ink);
+}
+
+.card[data-equipped='true'] {
+  background: color-mix(in oklch, var(--primary) 26%, var(--surface));
+  border-color: var(--primary-ink);
+  transform: translateY(-6px);
+}
+
+.card-name {
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  color: var(--primary-ink);
+  font-size: clamp(10px, 1vw, 15px);
+}
+
+.card-detail {
+  font: var(--type-body);
+  font-size: clamp(11px, 1vw, 15px);
+  color: var(--ink-dim);
+}
+
+/* --- Tabs and panes ------------------------------------------------------------------ */
+.tabs {
+  display: flex;
+  gap: var(--s5);
+  border-bottom: var(--hairline) solid color-mix(in oklch, var(--ink) 20%, transparent);
+}
+
+.tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: var(--s2) 0;
+  min-height: 44px;
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  font-size: clamp(10px, 1vw, 14px);
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color var(--dur-selection) var(--ease-ui);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--primary-ink);
+  border-bottom-color: var(--primary-ink);
+}
+
+.pane {
+  width: min(620px, 100%);
+  text-align: left;
+  display: grid;
+  gap: var(--s3);
+}
+
+.pane[hidden] {
+  display: none;
+}
+
+.pane dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s2) var(--s4);
+  margin: 0;
+}
+
+.pane dt {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
+
+.pane dd {
+  margin: 0;
+  font: var(--type-data);
+  letter-spacing: var(--track-data);
+  font-size: clamp(11px, 1vw, 16px);
+}
+
+/* --- Debrief, medals, board ------------------------------------------------------------ */
+.debrief {
+  /* Three across, so six figures read as two even rows rather than five and a
+     widow. auto-fit was letting the row count follow the viewport, which put
+     "friendlies lost" alone on a second line at exactly the width the panel
+     opens at. */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s5) var(--s4);
+  width: min(560px, 100%);
+}
+
+@media (max-width: 560px) {
+  .debrief {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.stat {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  text-align: left;
+}
+
+.stat-label {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  /* Two lines reserved so a wrapping label does not shove its own figure out
+     of line with the rest of the row. */
+  min-height: 2.2em;
+}
+
+.stat-value {
+  font: var(--type-data);
+  letter-spacing: var(--track-data);
+  font-size: clamp(16px, 1.8vw, 26px);
+  color: var(--primary-ink);
+}
+
+.medals {
+  display: flex;
+  gap: var(--s3);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.medal {
+  display: grid;
+  gap: 2px;
+  padding: var(--s2) var(--s4);
+  border: var(--hairline) solid var(--objective);
+  background: color-mix(in oklch, var(--objective) 14%, transparent);
+  text-align: left;
+}
+
+.medal-name {
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  font-size: clamp(9px, 0.9vw, 13px);
+  color: var(--objective);
+}
+
+.medal-detail {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-dim);
+}
+
+.board {
+  width: min(620px, 100%);
+  display: grid;
+  gap: var(--s1);
+}
+
+.board-row {
+  display: grid;
+  grid-template-columns: 2rem 4rem 1fr auto;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--surface);
+  font: var(--type-data);
+  letter-spacing: var(--track-data);
+  font-size: clamp(11px, 1vw, 15px);
+  text-align: left;
+}
+
+.board-row[data-fresh='true'] {
+  background: color-mix(in oklch, var(--primary) 24%, var(--surface));
+  color: var(--ink);
+}
+
+.board-empty {
+  font: var(--type-body);
+  color: var(--ink-dim);
+}
+
+/* --- Settings and forms -------------------------------------------------------------- */
+.options {
+  width: min(680px, 100%);
+  display: grid;
+  gap: var(--s3);
+}
+
+.option {
+  display: flex;
+  gap: var(--s4);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s3) var(--s4);
+  background: var(--surface);
+  text-align: left;
+}
+
+.option-name {
+  font: var(--type-item);
+  letter-spacing: var(--track-item);
+  font-size: clamp(10px, 1vw, 14px);
+}
+
+.option-detail {
+  font: var(--type-body);
+  font-size: clamp(11px, 0.95vw, 14px);
+  color: var(--ink-dim);
+  max-width: 46ch;
+}
+
+.initials {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: var(--s2) var(--s3);
+  justify-content: center;
+  align-items: center;
+}
+
+.initials label {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+.initials label {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-dim);
+}
+
+.input {
+  width: 6rem;
+  min-height: 44px;
+  padding: var(--s2) var(--s3);
+  background: var(--surface);
+  border: var(--hairline) solid color-mix(in oklch, var(--ink) 34%, transparent);
+  color: var(--ink);
+  font: var(--type-data);
+  letter-spacing: var(--track-data);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .hint {
+    display: none;
+  }
+  .option {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
