@@ -81,6 +81,8 @@ button {
 }
 
 .stage {
+  container-type: size;
+  container-name: stage;
   position: relative;
   aspect-ratio: 16 / 9;
   background: var(--background);
@@ -453,9 +455,14 @@ canvas {
   inset: 0;
   z-index: 20;
   display: grid;
-  align-content: center;
+  /* "safe" matters: plain centring pushes overflow off both ends of the box,
+     and the half above the top edge cannot be scrolled back to. With safe, a
+     panel taller than the stage starts at the top and scrolls down. */
+  align-content: safe center;
   justify-items: center;
   gap: var(--s4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--s6) var(--s5);
   text-align: center;
   background: color-mix(in oklch, var(--background) 86%, transparent);
@@ -843,5 +850,116 @@ canvas {
   .option {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+
+/* --- Compact viewports ---------------------------------------------------------
+   The arena keeps its 16:9 ratio at any width, so the HUD is what has to give.
+   Type steps down, the mission stops wrapping into a column, and the control
+   hint drops out entirely: it names keys that a narrow viewport probably does
+   not have. */
+.input-note {
+  font: var(--type-label);
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  max-width: 34ch;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .hud {
+    gap: var(--s2);
+  }
+
+  .hud-row {
+    gap: var(--s2);
+  }
+
+  /* Flex items refuse to shrink past their content by default, which pushed the
+     score and wave figures off the right edge at 390px while their labels
+     stayed visible. */
+  .hud-row > * {
+    min-width: 0;
+  }
+
+  .readout {
+    flex: 0 1 auto;
+  }
+
+  /* The meters shrink last: a health bar narrowed to a few pixels stops being a
+     bar, and the numerals alone are not the component. */
+  .meters {
+    flex: 0 0 auto;
+  }
+
+  .meter-track {
+    min-width: 56px;
+  }
+
+  .mission {
+    flex: 1 1 auto;
+  }
+
+  .readout {
+    min-width: 0;
+  }
+
+  .mission-text {
+    white-space: nowrap;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  .slot-body .slot-name {
+    max-width: 12ch;
+  }
+}
+
+@media (max-width: 480px) {
+  .slot {
+    padding: var(--s1) var(--s2);
+  }
+
+  /* Narrowed, never hidden: the name is this button's accessible name, so
+     display:none here would leave a control called "1". */
+  .slot-name {
+    max-width: 9ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+
+/* --- Short stages ---------------------------------------------------------------
+   Driven by the stage height rather than the viewport width, because a 16:9 box
+   on a narrow phone is short for the same reason a landscape laptop window is:
+   there is no room for display type at its authored size. */
+@container stage (max-height: 380px) {
+  .title {
+    font-size: clamp(2rem, 11cqh, 3.5rem);
+  }
+
+  .screen {
+    gap: var(--s2);
+    padding: var(--s4) var(--s3);
+  }
+
+  /* The eyebrow and the best-run line are context. The input note is the one
+     thing a phone player needs, so it stays. */
+  .eyebrow,
+  .best {
+    display: none;
+  }
+
+  .input-note {
+    max-width: 30ch;
+  }
+
+  .heading {
+    font-size: clamp(1.1rem, 8cqh, 1.8rem);
   }
 }

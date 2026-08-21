@@ -152,10 +152,11 @@ browser: the documented timings, the ability cycle, the combo ladder, the
 friendly-fire penalty, the wave curve, spawn bounds, the leaderboard and the
 medals, plus the invariants that stop a run contradicting its own HUD.
 
-`node mutiny-audit.mjs` drives the game end to end in Chromium: **70 checks**
+`node mutiny-audit.mjs` drives the game end to end in Chromium: **71 checks**
 covering a real keyboard playthrough, the intermission, the three pause tabs,
 the debrief, the leaderboard, both environments, reduced motion, focus order,
-the 390px viewport, and a boot with `localStorage` throwing on every call.
+the 390px viewport, vertical clipping inside the stage, and a boot with
+`localStorage` throwing on every call.
 
 Four defects those two caught, worth naming because "we tested it" means little
 without them:

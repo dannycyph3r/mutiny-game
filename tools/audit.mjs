@@ -439,6 +439,24 @@ const stageFits = await fresh.evaluate(() => {
   return r.width <= window.innerWidth + 1;
 });
 check('the stage fits the small viewport', stageFits);
+
+// Vertical clipping is the failure a horizontal-overflow check never sees. The
+// stage is a fixed 16:9 box, so on a phone it is short, and a centred panel
+// taller than its box loses its own heading off the top with no way to scroll
+// back to it.
+const clipped = await fresh.evaluate(() => {
+  const stage = document.getElementById('stage').getBoundingClientRect();
+  const bad = [];
+  document.querySelectorAll('#screen-title h1, #screen-title button').forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.top < stage.top - 1 || r.left < stage.left - 1 || r.right > stage.right + 1) {
+      bad.push(`${el.tagName}:${(el.textContent ?? '').trim().slice(0, 16)}`);
+    }
+  });
+  return bad;
+});
+check('nothing on the title screen is clipped off the top of the stage',
+  clipped.length === 0, clipped.join(', '));
 await fresh.close();
 
 /* --- the game must survive storage being unavailable ------------------------- */
